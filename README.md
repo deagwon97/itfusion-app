@@ -1,4 +1,4 @@
 # itfusion
 
-<img src="./doc/VideoList.png"/>
+<img src="./doc/videoList.png"/>
 <img src="./doc/playVideo.png"/>
