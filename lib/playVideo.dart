@@ -8,7 +8,9 @@
 /// video.
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -43,6 +45,9 @@ class PlayVideoState extends State<PlayVideo> {
 
   @override
   void initState() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft, // 가로 왼쪽 방향
+    ]);
     super.initState();
     getPathFuture = getApplicationDocumentsDirectory();
     getPathFuture.then((value) {
@@ -100,6 +105,12 @@ class PlayVideoState extends State<PlayVideo> {
   @override
   void dispose() {
     _controller.dispose();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp, // 가로 왼쪽 방향
+    ]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp, // 가로 왼쪽 방향
+    ]);
     super.dispose();
   }
 
@@ -109,10 +120,9 @@ class PlayVideoState extends State<PlayVideo> {
       child: Column(
         children: <Widget>[
           Container(
-            padding: const EdgeInsets.only(top: 20.0),
-          ),
-          Container(
-            padding: const EdgeInsets.all(20),
+            height: MediaQuery.of(context).size.height,
+            color: Colors.black,
+            alignment: Alignment.center,
             child: FutureBuilder(
               future: Future.wait([getPathFuture, futureGetJson]),
               builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
@@ -130,6 +140,111 @@ class PlayVideoState extends State<PlayVideo> {
                                 fontSize: 15, color: Colors.white)),
                         VideoProgressIndicator(_controller,
                             allowScrubbing: true),
+                        Container(
+                            alignment: Alignment.center,
+                            child: Column(children: [
+                              const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                vertical: 20,
+                                // horizontal: 16,
+                              )),
+                              Text(
+                                meaning,
+                                style: const TextStyle(
+                                    backgroundColor:
+                                        Color.fromRGBO(0, 0, 0, 0.5),
+                                    fontSize: 16,
+                                    color: Colors.white),
+                              ),
+                              const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                vertical: 40,
+                                // horizontal: 16,
+                              )),
+                              !_controller.value.isPlaying
+                                  ? Container(
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          OutlinedButton(
+                                              onPressed: () {
+                                                if (syncsIdx > 0) {
+                                                  syncsIdx = syncsIdx - 1;
+                                                }
+                                                _controller.seekTo(Duration(
+                                                    milliseconds: subtitleJsonRes[
+                                                                    "subtitles"][0]
+                                                                ["body"]
+                                                            ["syncs"][syncsIdx]
+                                                        ["startTime"] as int));
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.black, //<-- SEE HERE
+                                              ),
+                                              child: const Text("prev",
+                                                  style: TextStyle(
+                                                      fontSize: 30,
+                                                      color: Colors.white))),
+                                          const Padding(
+                                              padding: EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          )),
+                                          OutlinedButton(
+                                              onPressed: () {
+                                                isFillBlank =
+                                                    isFillBlank ? false : true;
+                                                _controller.seekTo(Duration(
+                                                    milliseconds:
+                                                        subtitleJsonRes["subtitles"]
+                                                                            [0]
+                                                                        ["body"]
+                                                                    ["syncs"]
+                                                                [syncsIdx - 1][
+                                                            "endTime"] as int));
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.black, //<-- SEE HERE
+                                              ),
+                                              child: const Text("fill blank",
+                                                  style: TextStyle(
+                                                      fontSize: 30,
+                                                      color: Colors.white))),
+                                          const Padding(
+                                              padding: EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          )),
+                                          OutlinedButton(
+                                              onPressed: () {
+                                                if (_controller
+                                                    .value.isPlaying) {
+                                                  syncsIdx++;
+                                                }
+                                                _controller.seekTo(Duration(
+                                                    milliseconds: 1 +
+                                                        subtitleJsonRes["subtitles"]
+                                                                            [0]
+                                                                        ["body"]
+                                                                    ["syncs"]
+                                                                [syncsIdx][
+                                                            "startTime"] as int));
+                                                _controller.play();
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.black, //<-- SEE HERE
+                                              ),
+                                              child: const Text("next",
+                                                  style: TextStyle(
+                                                      fontSize: 30,
+                                                      color: Colors.white)))
+                                        ],
+                                      ))
+                                  : Container()
+                            ]))
                       ],
                     ),
                   );
@@ -139,37 +254,6 @@ class PlayVideoState extends State<PlayVideo> {
               },
             ),
           ),
-          Text(meaning),
-          TextButton(
-              onPressed: () {
-                if (syncsIdx > 0) {
-                  syncsIdx = syncsIdx - 1;
-                }
-                _controller.seekTo(Duration(
-                    milliseconds: subtitleJsonRes["subtitles"][0]["body"]
-                        ["syncs"][syncsIdx]["startTime"] as int));
-              },
-              child: const Text("prev")),
-          TextButton(
-              onPressed: () {
-                isFillBlank = isFillBlank ? false : true;
-                _controller.seekTo(Duration(
-                    milliseconds: subtitleJsonRes["subtitles"][0]["body"]
-                        ["syncs"][syncsIdx - 1]["endTime"] as int));
-              },
-              child: const Text("fill blank")),
-          TextButton(
-              onPressed: () {
-                if (_controller.value.isPlaying) {
-                  syncsIdx++;
-                }
-                _controller.seekTo(Duration(
-                    milliseconds: 1 +
-                        subtitleJsonRes["subtitles"][0]["body"]["syncs"]
-                            [syncsIdx]["startTime"] as int));
-                _controller.play();
-              },
-              child: const Text("next"))
         ],
       ),
     );
