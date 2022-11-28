@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 class VideoList extends StatefulWidget {
   const VideoList({Key? key}) : super(key: key);
+
   @override
   State<VideoList> createState() => VideoListState();
 }
@@ -32,6 +33,7 @@ class VideoListState extends State<VideoList> {
       });
     });
   }
+
   //
   // @override
   // void dispose() {
@@ -41,36 +43,36 @@ class VideoListState extends State<VideoList> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: getPathFuture,
-        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-          if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: videoNameList.length,
-              itemBuilder: (context, index) {
-                final videoName = videoNameList[index];
-                return ListTile(
-                  title: Text(
-                    videoName,
-                  ),
-                  subtitle: Text(
-                    videoName,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => Scaffold(
-                                body: PlayVideo(videoName: videoName))));
-                  },
-                );
-              },
-            );
-          } else {
-            return Text("loading");
-          }
-        });
+    const List<String> videoNameList = [
+      'justice',
+      'dragon',
+      'avatar',
+      'superman',
+      'upcoming',
+      'predator'
+    ];
+    return ListView.builder(
+      itemCount: videoNameList.length,
+      itemBuilder: (context, index) {
+        final videoName = videoNameList[index];
+        return ListTile(
+          title: Text(
+            videoName,
+          ),
+          subtitle: Text(
+            videoName,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        Scaffold(body: PlayVideo(videoName: videoName))));
+          },
+        );
+      },
+    );
   }
 }

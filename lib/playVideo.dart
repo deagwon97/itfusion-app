@@ -7,12 +7,10 @@
 /// An example of using the plugin, controlling lifecycle and playback of the
 /// video.
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 Future<Map<String, dynamic>> getJson(String videoName) async {
@@ -24,16 +22,27 @@ Future<Map<String, dynamic>> getJson(String videoName) async {
   return jsonResponse;
 }
 
+Future<Map<String, dynamic>> getVideoLink(String videoName) async {
+  var url =
+      Uri.https('itfusion.deagwon.com', 'movie/file', {'name': videoName});
+  var response = await http.get(url);
+  var jsonResponse = await json.decode(utf8.decode(response.bodyBytes))
+      as Map<String, dynamic>;
+  return jsonResponse;
+}
+
 class PlayVideo extends StatefulWidget {
   const PlayVideo({Key? key, required this.videoName}) : super(key: key);
   final String videoName;
+
   @override
   PlayVideoState createState() => PlayVideoState();
 }
 
 class PlayVideoState extends State<PlayVideo> {
   late VideoPlayerController _controller;
-  Future getPathFuture = Future.delayed(const Duration(seconds: 1000));
+
+  // Future getPathFuture = Future.delayed(const Duration(seconds: 1000));
   Future futureGetJson = Future.delayed(const Duration(seconds: 1000));
   late Map<String, dynamic> subtitleJsonRes;
 
@@ -49,56 +58,59 @@ class PlayVideoState extends State<PlayVideo> {
       DeviceOrientation.landscapeLeft, // 가로 왼쪽 방향
     ]);
     super.initState();
-    getPathFuture = getApplicationDocumentsDirectory();
-    getPathFuture.then((value) {
-      _controller = VideoPlayerController.file(
-          File(value.path + "/${widget.videoName}.mp4"));
-      futureGetJson = getJson(widget.videoName);
-      futureGetJson.then((res) {
-        subtitleJsonRes = res;
 
-        _controller.addListener(() {
-          setState(() {
-            if (_controller.value.isPlaying) {
+    getVideoLink(widget.videoName).then((response) {
+      print('response $response');
+      _controller = VideoPlayerController.network(response['url'])
+        ..initialize().then((_) {
+          futureGetJson = getJson(widget.videoName);
+          futureGetJson.then((res) {
+            subtitleJsonRes = res;
+
+            _controller.addListener(() {
               setState(() {
-                if (res!["subtitles"][0]["body"]["syncs"][syncsIdx]["text"] ==
-                    "&nbsp;") {
-                  syncsIdx++;
-                  return;
-                }
-                if (_controller.value.position.inMilliseconds >=
-                    (res!["subtitles"][0]["body"]["syncs"][syncsIdx]
-                        ["startTime"] as int)) {
-                  selectedCaption = res!["subtitles"][0]["body"]["syncs"]
-                      [syncsIdx]["text"] as String;
-                  blankCaption = "";
-                  meaning = "";
-                  var extras =
-                      res!["subtitles"][0]["body"]["syncs"][syncsIdx]["extras"];
-                  for (var idx = 0; idx < extras.length; idx++) {
-                    if (extras[idx]["properties"]["level"] == 1) {
-                      blankCaption = ("$blankCaption (___)");
-                      meaning =
-                          ("$meaning ${extras[idx]["properties"]["original"]}-${extras[idx]["properties"]["meaning"]}/");
-                    } else {
-                      blankCaption =
-                          ("$blankCaption ${extras[idx]["properties"]["variant"]! as String}");
+                if (_controller.value.isPlaying) {
+                  setState(() {
+                    if (res!["subtitles"][0]["body"]["syncs"][syncsIdx]
+                            ["text"] ==
+                        "&nbsp;") {
+                      syncsIdx++;
+                      return;
                     }
-                  }
-                }
-                if (_controller.value.position.inMilliseconds >=
-                    (res!["subtitles"][0]["body"]["syncs"][syncsIdx]["endTime"]
-                        as int)) {
-                  _controller.pause();
-                  syncsIdx++;
+                    if (_controller.value.position.inMilliseconds >=
+                        (res!["subtitles"][0]["body"]["syncs"][syncsIdx]
+                            ["startTime"] as int)) {
+                      selectedCaption = res!["subtitles"][0]["body"]["syncs"]
+                          [syncsIdx]["text"] as String;
+                      blankCaption = "";
+                      meaning = "";
+                      var extras = res!["subtitles"][0]["body"]["syncs"]
+                          [syncsIdx]["extras"];
+                      for (var idx = 0; idx < extras.length; idx++) {
+                        if (extras[idx]["properties"]["level"] == 1) {
+                          blankCaption = ("$blankCaption (___)");
+                          meaning =
+                              ("$meaning ${extras[idx]["properties"]["original"]}-${extras[idx]["properties"]["meaning"]}/");
+                        } else {
+                          blankCaption =
+                              ("$blankCaption ${extras[idx]["properties"]["variant"]! as String}");
+                        }
+                      }
+                    }
+                    if (_controller.value.position.inMilliseconds >=
+                        (res!["subtitles"][0]["body"]["syncs"][syncsIdx]
+                            ["endTime"] as int)) {
+                      _controller.pause();
+                      syncsIdx++;
+                    }
+                  });
                 }
               });
-            }
+            });
+            _controller.setLooping(true);
+            _controller.initialize().then((_) => setState(() {}));
           });
         });
-        _controller.setLooping(true);
-        _controller.initialize().then((_) => setState(() {}));
-      });
     });
   }
 
@@ -124,7 +136,7 @@ class PlayVideoState extends State<PlayVideo> {
             color: Colors.black,
             alignment: Alignment.center,
             child: FutureBuilder(
-              future: Future.wait([getPathFuture, futureGetJson]),
+              future: Future.wait([futureGetJson]),
               builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
                 if (snapshot.hasData) {
                   return AspectRatio(
@@ -287,6 +299,7 @@ class _ControlsOverlay extends StatelessWidget {
   ];
 
   final VideoPlayerController controller;
+
   @override
   Widget build(BuildContext context) {
     return Stack(
